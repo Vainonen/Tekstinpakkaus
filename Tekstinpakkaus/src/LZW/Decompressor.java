@@ -1,27 +1,39 @@
 package LZW;
 
+import FileIO.FileRead;
+import FileIO.FileWrite;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import tools.ByteTranslator;
 
 /**
  * Luokka LZW-pakatun tiedoston purkamista varten.
  */
 public class Decompressor {
     
-    private ArrayList pack;
+    private byte [] pack;
+    private FileWrite fw;
+    private int pointer;
     
     /**
-    * @param feed Tavutaulukko, joka puretaan LZW-algoritmilla
+     * @param input Purettavan tiedoston nimi.
+     * @param output Nimi palautettavalle tiedostolle.
+     * @throws java.io.FileNotFoundException
     */
-    public Decompressor (ArrayList feed) {
-        this.pack = feed;
+    public Decompressor (String input, String output) throws FileNotFoundException, IOException {
+        FileRead fr = new FileRead(input);
+        this.pack = fr.read();
+        this.fw = new FileWrite(output);
     }
       
     /**
      * Purkaa takaisin pakatun merkistön.
      * @return ArrayList, jonka alkiot byte-muodossa.
+     * @throws java.io.IOException
      */
-    public ArrayList decompress () {
+    public ArrayList decompress () throws IOException {
         
         //LZW-sanakirjan alustus:
         HashMap <Integer, ArrayList> dictionary = new HashMap();
@@ -35,43 +47,63 @@ public class Decompressor {
         ArrayList output = new ArrayList();
         int n = 0;
         int code = 256;
-         while (n < this.pack.size()) {
+        int bitlength = 9;
+        int current = -1;
+        ByteTranslator bt = new ByteTranslator();
+        
+         while (n < this.pack.length) {
+            int next = -1;
+            
+            //luetaan tavumuotoisesta asyötteestä koodin mukainen määrä bittejä kokonaisluvuksi
+            while (true) {
+                next = bt.fromBytes((byte)this.pack[n], bitlength);
+                n++;
+                if (next != -1) break;
+                if (n == this.pack.length-1) {
+                    current = (int)bt.getRemainder()+128;
+                    break;
+                }
+            }
+            
             ArrayList bytes = new ArrayList();          
-            int current = (int)this.pack.get(n);
-            ArrayList c = dictionary.get(current);                 
+            //int current = (int)this.pack[n]+128;
+            
+             System.out.println("current "+current+" next "+next);
+            if (current != -1) {
+                ArrayList c = dictionary.get(current);    
                 for(int i = 0; i < c.size(); i++){
                     bytes.add(c.get(i));
+                    output.add(c.get(i));
+                    fw.write((byte)c.get(i));
                 }
-            int next = 0;         
-            if (n < this.pack.size()-1) {
-                next = (int)this.pack.get(n+1);
-                //Tässä ehtolauseessa on vielä bugi, jonka takia purkaminen ei onnistu 100-prosenttisesti:
-                if (!dictionary.containsKey(next)) {
-                    ArrayList d = dictionary.get(current);                 
-                    bytes.add(d.get(0));
-                    dictionary.put(code, bytes);
-                }                
-                else if (current > 255) {
-                    ArrayList a = dictionary.get(next);
-                    bytes.add(a.get(0));
-                    dictionary.put(code, bytes);
-                }
-                else {
-                    ArrayList b = dictionary.get(next);
-                    for(int i = 0; i < b.size(); i++){
-                    bytes.add(b.get(i));
-                    dictionary.put(code, bytes);
-                    }    
-                }
-            }    
-            ArrayList ci = dictionary.get(current);
-            for (int i = 0; i < ci.size(); i++) {
-                output.add(ci.get(i));
             }
-            n++;
-            code++;
+            
+            //int next = 0;         
+            if (n < this.pack.length-1 && current != -1) {
+                next = (int)this.pack[n+1]+128;
+                System.out.println("next "+next);
+                if (!dictionary.containsKey(next)) {
+                    ArrayList previousCode = dictionary.get(code-1);
+                    bytes.add(previousCode.get(previousCode.size()-1));
+                }                
+                else {
+                    ArrayList nextCode = dictionary.get(next);
+                    bytes.add(nextCode.get(0));
+                }
+                dictionary.put(code, bytes);
+            }    
+            //n++;
+            current = next;
+            
+            // Tämä tarkistus bitti-tavumuunnoksia varten:
+            if (code != 256 && code % Math.pow(2, (double)bitlength) == 0) {
+                bitlength++;
+                System.out.println("code "+code+" bitlength "+bitlength);
+            }
+            
+            if (current != -1) code++;
         }
+        fw.close();
         return output;
     }
-
 }

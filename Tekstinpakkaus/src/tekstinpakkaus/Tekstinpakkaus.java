@@ -1,35 +1,37 @@
 package tekstinpakkaus;
 
+import FileIO.FileRead;
 import LZW.Compressor;
 import LZW.Decompressor;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Scanner;
+import tools.ByteTranslator;
 
 public class Tekstinpakkaus {
 
     public static void main(String[] args) throws IOException {
+         
         Scanner sc = new Scanner(System.in);
-        System.out.println("Anna pakattavan tiedostonimi: ");       
-        String name = sc.nextLine();
-        byte [] teksti = FileIO.read(name);
-   
-        System.out.println("");
-        System.out.println("koko "+teksti.length);
-    
-        Compressor pakkaus = new Compressor(teksti);
+        
+        System.out.println("Anna pakattavan tiedoston nimi: ");       
+        String input = sc.nextLine();
+
+        System.out.println("Anna pakkaukselle tiedostonimi: ");       
+        String output = sc.nextLine();
+        
+        Compressor pakkaus = new Compressor(input, output);
         ArrayList pakattu = new ArrayList();
         pakattu = pakkaus.compress();
-        System.out.println("pakattu "+pakattu);
-        System.out.println("pakkauksen koko"+pakattu.size());
-        Decompressor purku = new Decompressor(pakattu);
-        ArrayList purettu = purku.decompress();
-        System.out.println("purettu  "+purettu);
-        byte[] ba = new byte[purettu.size()];
-        for(int i = 0; i<purettu.size(); i++){
-            ba[i] = (byte)purettu.get(i);
-        }
+        
+        System.out.println("Anna purettavan tiedoston nimi: ");       
+        input = sc.nextLine();
+        
+        System.out.println("Anna tallennustiedoston nimi: ");       
+        output = sc.nextLine();
 
-        FileIO.write("testi2.txt", ba);
+        Decompressor purku = new Decompressor(input, output);
+        ArrayList purettu = purku.decompress();
+
     }  
 }
