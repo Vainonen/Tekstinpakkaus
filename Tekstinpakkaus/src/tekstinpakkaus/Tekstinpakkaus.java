@@ -19,7 +19,7 @@ public class Tekstinpakkaus {
 
         System.out.println("Anna pakkaukselle tiedostonimi: ");       
         String output = sc.nextLine();
-        
+       
         Compressor pakkaus = new Compressor(input, output);
         ArrayList pakattu = new ArrayList();
         pakattu = pakkaus.compress();
@@ -29,7 +29,7 @@ public class Tekstinpakkaus {
         
         System.out.println("Anna tallennustiedoston nimi: ");       
         output = sc.nextLine();
-
+        
         Decompressor purku = new Decompressor(input, output);
         ArrayList purettu = purku.decompress();
 

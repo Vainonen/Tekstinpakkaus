@@ -66,18 +66,16 @@ public class Compressor {
             
             // Tämä tarkistus bitti-tavumuunnoksia varten:
             if (code % Math.pow(2, (double)bitlength) == 0) {
-                bitlength++;
-                System.out.println("code "+code+" bitlength "+bitlength);
+                bitlength++;         
             }
+            
             ArrayList <Byte> translated = bt.toBytes((int)dictionary.get(current), bitlength);
             for (Byte b : translated) {
                 output.add(b);
                 fw.write(b);
             }
-            code++;    
-            
+            code++;              
         }
-        System.out.println("viimeinen koodi "+code);
         ArrayList <Byte> translated = bt.toBytes((int)this.text[n], bitlength);
         for (Byte b : translated) {
             output.add(b);

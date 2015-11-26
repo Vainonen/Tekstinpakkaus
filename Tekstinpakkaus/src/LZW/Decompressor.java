@@ -46,7 +46,7 @@ public class Decompressor {
         
         ArrayList output = new ArrayList();
         int n = 0;
-        int code = 256;
+        int code = 255;
         int bitlength = 9;
         int current = -1;
         ByteTranslator bt = new ByteTranslator();
@@ -56,20 +56,21 @@ public class Decompressor {
             
             //luetaan tavumuotoisesta asyötteestä koodin mukainen määrä bittejä kokonaisluvuksi
             while (true) {
+                //System.out.println("(byte)this.pack[n] "+(byte)this.pack[n]);
                 next = bt.fromBytes((byte)this.pack[n], bitlength);
                 n++;
+                //System.out.println("next "+n+" "+next);
                 if (next != -1) break;
-                if (n == this.pack.length-1) {
+                if (n == this.pack.length) {
                     current = (int)bt.getRemainder()+128;
                     break;
                 }
             }
-            
             ArrayList bytes = new ArrayList();          
             //int current = (int)this.pack[n]+128;
             
-             System.out.println("current "+current+" next "+next);
             if (current != -1) {
+                System.out.println("current "+current);
                 ArrayList c = dictionary.get(current);    
                 for(int i = 0; i < c.size(); i++){
                     bytes.add(c.get(i));
@@ -80,8 +81,8 @@ public class Decompressor {
             
             //int next = 0;         
             if (n < this.pack.length-1 && current != -1) {
-                next = (int)this.pack[n+1]+128;
-                System.out.println("next "+next);
+                //next = (int)this.pack[n+1]+128;
+                
                 if (!dictionary.containsKey(next)) {
                     ArrayList previousCode = dictionary.get(code-1);
                     bytes.add(previousCode.get(previousCode.size()-1));
@@ -92,17 +93,22 @@ public class Decompressor {
                 }
                 dictionary.put(code, bytes);
             }    
+            
             //n++;
             current = next;
             
             // Tämä tarkistus bitti-tavumuunnoksia varten:
             if (code != 256 && code % Math.pow(2, (double)bitlength) == 0) {
                 bitlength++;
-                System.out.println("code "+code+" bitlength "+bitlength);
+                //System.out.println("code "+code+" bitlength "+bitlength);
             }
             
             if (current != -1) code++;
         }
+        //bt.fromBytes((byte)this.pack[this.pack.length-1], bitlength);
+        //current = (int)bt.getRemainder()+128;
+   
+        fw.write((byte)this.pack[this.pack.length-1]);
         fw.close();
         return output;
     }
