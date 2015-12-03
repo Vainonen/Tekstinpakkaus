@@ -15,7 +15,9 @@ public class Decompressor {
     
     private byte [] pack;
     private FileWrite fw;
-    private int pointer;
+    private int bitlength;
+    private ByteTranslator bt;
+    private int n; // pointteri, joka viittaa käsiteltävään kohtaan tiedostossa
     
     /**
      * @param input Purettavan tiedoston nimi.
@@ -26,6 +28,8 @@ public class Decompressor {
         FileRead fr = new FileRead(input);
         this.pack = fr.read();
         this.fw = new FileWrite(output);
+        this.n = 0;
+        this.bitlength = 9;
     }
       
     /**
@@ -38,50 +42,31 @@ public class Decompressor {
         //LZW-sanakirjan alustus:
         HashMap <Integer, ArrayList> dictionary = new HashMap();
         for (int i = 0; i < 256; i++) {
-            ArrayList <Byte> bytes = new ArrayList();
-            byte b =(byte)i;
-            bytes.add(b);
+            ArrayList <Integer> bytes = new ArrayList();
+            bytes.add(i);
             dictionary.put(i, bytes);
         }  
         
         ArrayList output = new ArrayList();
-        int n = 0;
-        int code = 255;
-        int bitlength = 9;
-        int current = -1;
-        ByteTranslator bt = new ByteTranslator();
+        
+        bt = new ByteTranslator();
+        int code = 256;
+        int current = getBits();
         
          while (n < this.pack.length) {
-            int next = -1;
-            
-            //luetaan tavumuotoisesta asyötteestä koodin mukainen määrä bittejä kokonaisluvuksi
-            while (true) {
-                //System.out.println("(byte)this.pack[n] "+(byte)this.pack[n]);
-                next = bt.fromBytes((byte)this.pack[n], bitlength);
-                n++;
-                //System.out.println("next "+n+" "+next);
-                if (next != -1) break;
-                if (n == this.pack.length) {
-                    current = (int)bt.getRemainder()+128;
-                    break;
+            int next = -1;       
+            ArrayList bytes = new ArrayList();
+            ArrayList c = dictionary.get(current);
+            for(int i = 0; i < c.size(); i++){
+                bytes.add(c.get(i));
+                output.add(c.get(i));
+                int bytenumber = (int)c.get(i)-128;
+                fw.write((byte)bytenumber);
                 }
-            }
-            ArrayList bytes = new ArrayList();          
-            //int current = (int)this.pack[n]+128;
             
-            if (current != -1) {
-                System.out.println("current "+current);
-                ArrayList c = dictionary.get(current);    
-                for(int i = 0; i < c.size(); i++){
-                    bytes.add(c.get(i));
-                    output.add(c.get(i));
-                    fw.write((byte)c.get(i));
-                }
-            }
-            
-            //int next = 0;         
-            if (n < this.pack.length-1 && current != -1) {
-                //next = (int)this.pack[n+1]+128;
+   
+            if (n < this.pack.length) {
+                next = getBits();
                 
                 if (!dictionary.containsKey(next)) {
                     ArrayList previousCode = dictionary.get(code-1);
@@ -94,22 +79,38 @@ public class Decompressor {
                 dictionary.put(code, bytes);
             }    
             
-            //n++;
             current = next;
+            code++;
             
             // Tämä tarkistus bitti-tavumuunnoksia varten:
-            if (code != 256 && code % Math.pow(2, (double)bitlength) == 0) {
-                bitlength++;
-                //System.out.println("code "+code+" bitlength "+bitlength);
-            }
-            
-            if (current != -1) code++;
+            if ((code + 1) % Math.pow(2, (double)this.bitlength) == 0) this.bitlength++;
         }
-        //bt.fromBytes((byte)this.pack[this.pack.length-1], bitlength);
-        //current = (int)bt.getRemainder()+128;
-   
-        fw.write((byte)this.pack[this.pack.length-1]);
+
+        fw.write((byte)current);
         fw.close();
+
         return output;
+    }
+    
+    /**
+     * Silmukanmuotoinen metodi, joka hakee ByteTranlator-oliolla määritellyn pituisen bittijonon.
+     * @return bitit kokonaislukumuodossa
+     */
+    private int getBits () {
+        int bits;
+        while (true) {
+     
+            bits = this.bt.fromBytes((int)this.pack[this.n], this.bitlength);
+            this.n++;
+            
+             if (this.n == this.pack.length && !bt.isEmpty()) {
+                bits += (int)bt.getRemainder();
+                break;
+                }
+             
+            if (bits != -1) break;
+        }    
+            
+        return bits;
     }
 }

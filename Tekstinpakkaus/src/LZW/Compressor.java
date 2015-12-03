@@ -38,9 +38,8 @@ public class Compressor {
         //LZW-sanakirjan alustus:
         HashMap <ArrayList, Integer> dictionary = new HashMap();
         for (int i = 0; i < 256; i++) {
-            ArrayList <Byte> bytes = new ArrayList();
-            byte b =(byte)i;
-            bytes.add(b);
+            ArrayList <Integer> bytes = new ArrayList();
+            bytes.add(i);
             dictionary.put(bytes, i);
         }  
         
@@ -52,22 +51,21 @@ public class Compressor {
         ByteTranslator bt = new ByteTranslator();
         
         while (n < this.text.length-1) {
-            ArrayList <Byte> current = new ArrayList();
-            ArrayList <Byte> next = new ArrayList();
-            current.add(this.text[n]); 
-            next.add(this.text[n]); 
+            ArrayList <Integer> current = new ArrayList();
+            ArrayList <Integer> next = new ArrayList();
+            current.add((int)this.text[n]+128); 
+            next.add((int)this.text[n]+128); 
+            
             while (dictionary.containsKey(next) && n < this.text.length-1) {
-                current.add(this.text[n+1]);
-                next.add(this.text[n+1]);
+                current.add((int)this.text[n+1]+128); 
+                next.add((int)this.text[n+1]+128); 
                 n++;
             }
             dictionary.put(next, code);
             current.remove(current.size()-1);
             
             // Tämä tarkistus bitti-tavumuunnoksia varten:
-            if (code % Math.pow(2, (double)bitlength) == 0) {
-                bitlength++;         
-            }
+            if (code % Math.pow(2, (double)bitlength) == 0) bitlength++;         
             
             ArrayList <Byte> translated = bt.toBytes((int)dictionary.get(current), bitlength);
             for (Byte b : translated) {
@@ -81,8 +79,10 @@ public class Compressor {
             output.add(b);
             fw.write(b);
         }
-        output.add(bt.getRemainder());
-        fw.write(bt.getRemainder());
+        if (!bt.isEmpty()) {
+            output.add(bt.getRemainder());
+            fw.write(bt.getRemainder());
+        }
         fw.close();
         return output;
     }
