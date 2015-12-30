@@ -7,6 +7,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import tools.ByteTranslator;
+import tools.EncodingDictionary;
+import tools.Node;
+import tools.Nodes;
 
 /**
  * Luokka merkkijonojen pakkausta varten.
@@ -28,22 +31,24 @@ public class Compressor {
     }
   
     /**
-     * Palauttaa n-pituisen bittijonon.
-     * @return ArrayList, johon eripituiset bittijonot muutettu
-     * tavuiksi tiedostoon kirjoittamista varten.
+     * Kirjoittaa n-pituisen bittijonon levylle.
      * @throws java.io.IOException
      */
-    public ArrayList compress () throws IOException {
-           
-        //LZW-sanakirjan alustus:
-        HashMap <ArrayList, Integer> dictionary = new HashMap();
-        for (int i = 0; i < 256; i++) {
-            ArrayList <Integer> bytes = new ArrayList();
-            bytes.add(i);
-            dictionary.put(bytes, i);
-        }  
+    public void compress () throws IOException {
         
-        ArrayList <Byte> output = new ArrayList();
+        long aikaAlussa = System.currentTimeMillis(); 
+        
+        Nodes <Integer> test = new Nodes();
+        test.push((int)this.text[0]+128); 
+
+        EncodingDictionary dictionary = new EncodingDictionary();
+        for (int i = 0; i < 256; i++) {
+            Nodes <Integer> bytes = new Nodes();
+            bytes.push(i);
+            dictionary.add(i, bytes);
+        }  
+  
+        Nodes <Byte> output = new Nodes();
         
         int n = 0;
         int code = 256;
@@ -51,39 +56,58 @@ public class Compressor {
         ByteTranslator bt = new ByteTranslator();
         
         while (n < this.text.length-1) {
-            ArrayList <Integer> current = new ArrayList();
-            ArrayList <Integer> next = new ArrayList();
-            current.add((int)this.text[n]+128); 
-            next.add((int)this.text[n]+128); 
-            
-            while (dictionary.containsKey(next) && n < this.text.length-1) {
-                current.add((int)this.text[n+1]+128); 
-                next.add((int)this.text[n+1]+128); 
+            Nodes <Integer> current = new Nodes();
+            Nodes <Integer> next = new Nodes();
+            current.push((int)this.text[n]+128); 
+            next.push((int)this.text[n]+128); 
+
+            while (dictionary.contains(next) && n < this.text.length-1) {
+                current.push((int)this.text[n+1]+128); 
+                next.push((int)this.text[n+1]+128); 
                 n++;
             }
-            dictionary.put(next, code);
-            current.remove(current.size()-1);
+            dictionary.add(code, next);
             
+            current.pop();
+
             // Tämä tarkistus bitti-tavumuunnoksia varten:
             if (code % Math.pow(2, (double)bitlength) == 0) bitlength++;         
+
+            Nodes <Byte> translated = bt.toBytes((int)dictionary.getCode(current), bitlength);
             
-            ArrayList <Byte> translated = bt.toBytes((int)dictionary.get(current), bitlength);
-            for (Byte b : translated) {
-                output.add(b);
-                fw.write(b);
+            Node node = translated.getFirst();
+        
+            for (int i = 0; i < translated.Size(); i++) {
+                Byte b = (byte)node.getValue();
+                output.push(b);
+                node = translated.getNext(node);
             }
-            code++;              
+            code++;
+        
         }
-        ArrayList <Byte> translated = bt.toBytes((int)this.text[n], bitlength);
-        for (Byte b : translated) {
-            output.add(b);
-            fw.write(b);
-        }
+        
+        long aikaLopussa = System.currentTimeMillis(); 
+        System.out.println("Pakkausaika millisekunneissa "+(aikaLopussa-aikaAlussa));
+        
+        Nodes <Byte> translated = bt.toBytes((int)this.text[n], bitlength);
+        Node node = translated.getFirst();
+        
+            for (int i = 0; i < translated.Size(); i++) {
+                Byte b = (byte)node.getValue();
+                output.push(b);
+                node = translated.getNext(node);
+            }
+            
+        Node outputnode = output.getFirst();
+        
+            for (int i = 0; i < output.Size(); i++) {
+                Byte b = (byte)outputnode.getValue();
+                fw.write(b);
+                if (outputnode.hasNext()) outputnode = output.getNext(outputnode);
+            }
         if (!bt.isEmpty()) {
-            output.add(bt.getRemainder());
             fw.write(bt.getRemainder());
         }
         fw.close();
-        return output;
     }
 }

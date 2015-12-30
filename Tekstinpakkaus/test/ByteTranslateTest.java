@@ -7,6 +7,9 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import tools.ByteTranslator;
+import tools.Node;
+import tools.Nodes;
+
 
 public class ByteTranslateTest {
     
@@ -22,19 +25,23 @@ public class ByteTranslateTest {
     
     @Test
     public void testTranslatingToBytes () {
-        ArrayList eightbit = bt.toBytes(255, 9);
+        Nodes eightbit = bt.toBytes(255, 9);
         //palauttaa 011111111:stä ensimmäiset 8 bittiä
-        assertTrue(eightbit.contains((byte)127));
+        byte first = (byte)eightbit.getFirst().getValue();
+        assertTrue(first == (byte)127);
     }
         
     @Test
     public void testTranslatingFromBytes () {
         byte b = 0;
         byte c = 127; 
-        bt.fromBytes(b, 9);
+        //bt.fromBytes(b, 9);
+        //bt.fromBytes(c, 9);
         int eightbit = bt.fromBytes(b, 9);
+        System.out.println(eightbit);
+        System.out.println((byte)128);
         //syötteinä 100000000 ja 000000000 palauttaa ensimmäiset 8 bittiä
-        assertTrue(eightbit == 128);
+        assertTrue(eightbit == (byte)128);
     }
     
     @Test

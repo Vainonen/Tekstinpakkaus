@@ -13,8 +13,6 @@ public class Node<E> {
     */
     public Node (E value) {
         this.value = value;
-        //if (next != null) this.next = next;
-        //else 
         this.next = null;
     }
     
@@ -32,5 +30,10 @@ public class Node<E> {
      
     public Node getNext() {
         return this.next;
+    }
+    
+    public boolean hasNext() {
+        if (this.next == null) return false;
+        return true;
     }
 }

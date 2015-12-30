@@ -29,5 +29,12 @@ public class FileRead {
         this.fis.read(data, 0, data.length);
         return data;
     }
-
+    
+    /**
+     * Tiedostokoko tavuina
+     * @return tiedostokoko long-muodossa.
+     */
+    public long filesize() {
+        return this.inputFile.length();
+    }
 }

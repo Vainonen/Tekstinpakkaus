@@ -1,13 +1,14 @@
 package tools;
 
-import java.util.ArrayList;
-
 /**
  * Luokka bitti- ja tavumuunnoksia varten.
+ * Javan tiedoston luvussa ja kirjoituksessa käytetään tavukokoa,
+ * joten tämä luokka pitää kirjaa LZW-algoritmin ylijäämänä jääneistä
+ * biteistä, sillä LZW-pakkausessa käsitellään erimittaisia bittijonoja
  */
 public class ByteTranslator {
     
-    private StringBuilder residue;
+    private StringBuilder residue; 
     
     public ByteTranslator() {
         this.residue = new StringBuilder();
@@ -18,9 +19,9 @@ public class ByteTranslator {
      * @param bitlength LZW-sanakirjan koodista laskettu lukema, jonka suuruisiin osiin syöte pilkotaan
      * @return palauttaa listana tavun kokoisiin osiin pilkotun syötteen tallennusta varten
     */
-    public ArrayList toBytes (int number, int bitlength) {
-            
-        ArrayList <Byte> bytes = new ArrayList();
+    public Nodes toBytes (int number, int bitlength) {
+
+        Nodes <Byte> bytes = new Nodes();
         String bs = Integer.toBinaryString(number);
         for (int i=0; i < bitlength - bs.length(); i++) {
             this.residue.append("0");
@@ -28,12 +29,10 @@ public class ByteTranslator {
         this.residue.append(bs);
         while (this.residue.length() >= 8) {
             String eightbit = this.residue.substring(0, 8);
-            bytes.add((byte)Integer.parseInt(eightbit, 2));        
+            bytes.push((byte)Integer.parseInt(eightbit, 2));        
             this.residue.delete(0, 8);
-        }
-        
-        return bytes;
-        
+        }       
+        return bytes;       
     }
     
     /**
@@ -48,10 +47,9 @@ public class ByteTranslator {
             this.residue.append("0");
         }
         this.residue.append(bs);
-
         if (this.residue.length() < bitlength) return -1;
         int bits = Integer.parseInt(this.residue.substring(0, bitlength), 2);
-        this.residue.delete(0, bitlength);
+        this.residue.delete(0, bitlength);    
         return bits;
     }
     

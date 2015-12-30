@@ -43,4 +43,11 @@ public class FileWrite {
         fos.close();
     }
     
+    /**
+     * Tiedostokoko tavuina
+     * @return tiedostokoko long-muodossa.
+     */
+    public long filesize() {
+        return this.outputFile.length();
+    }  
 }

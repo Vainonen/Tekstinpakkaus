@@ -7,6 +7,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import tools.ByteTranslator;
+import tools.DecodingDictionary;
+import tools.EncodingDictionary;
+import tools.KeyValuePair;
+import tools.Node;
+import tools.Nodes;
 
 /**
  * Luokka LZW-pakatun tiedoston purkamista varten.
@@ -33,63 +38,74 @@ public class Decompressor {
     }
       
     /**
-     * Purkaa takaisin pakatun merkistön.
-     * @return ArrayList, jonka alkiot byte-muodossa.
+     * Purkaa takaisin pakatun merkistön ja tallentaa sen levylle.
      * @throws java.io.IOException
      */
-    public ArrayList decompress () throws IOException {
+    public void decompress () throws IOException {
+        
+        long aikaAlussa = System.currentTimeMillis(); 
         
         //LZW-sanakirjan alustus:
-        HashMap <Integer, ArrayList> dictionary = new HashMap();
+        DecodingDictionary dictionary = new DecodingDictionary();
         for (int i = 0; i < 256; i++) {
-            ArrayList <Integer> bytes = new ArrayList();
-            bytes.add(i);
-            dictionary.put(i, bytes);
+            Nodes <Integer> bytes = new Nodes();
+            bytes.push(i);
+            dictionary.add(i, bytes);
+            
         }  
         
-        ArrayList output = new ArrayList();
+        Nodes <Integer> output = new Nodes();
         
         bt = new ByteTranslator();
         int code = 256;
         int current = getBits();
-        
+
          while (n < this.pack.length) {
             int next = -1;       
-            ArrayList bytes = new ArrayList();
-            ArrayList c = dictionary.get(current);
-            for(int i = 0; i < c.size(); i++){
-                bytes.add(c.get(i));
-                output.add(c.get(i));
-                int bytenumber = (int)c.get(i)-128;
-                fw.write((byte)bytenumber);
+            Nodes bytes = new Nodes();
+            Nodes nodes = dictionary.getValue(current);  
+            Node node = nodes.getFirst();
+
+            for(int i = 0; i < nodes.Size(); i++){            
+                bytes.push(node.getValue());
+                int bytenumber = (int)node.getValue()-128;
+                output.push(bytenumber);
+                if (node.hasNext()) node = nodes.getNext(node);
                 }
-            
-   
+             
             if (n < this.pack.length) {
                 next = getBits();
-                
-                if (!dictionary.containsKey(next)) {
-                    ArrayList previousCode = dictionary.get(code-1);
-                    bytes.add(previousCode.get(previousCode.size()-1));
+                if (!dictionary.contains(next)) {
+                    Nodes previousCode = dictionary.getValue(code-1);
+                    bytes.push((int)previousCode.getLast().getValue());
                 }                
                 else {
-                    ArrayList nextCode = dictionary.get(next);
-                    bytes.add(nextCode.get(0));
+                    Nodes nextCode = dictionary.getValue(next);
+                    bytes.push((int)nextCode.getFirst().getValue());
                 }
-                dictionary.put(code, bytes);
-            }    
-            
+                dictionary.add(code, bytes);
+            }               
             current = next;
             code++;
-            
+
             // Tämä tarkistus bitti-tavumuunnoksia varten:
             if ((code + 1) % Math.pow(2, (double)this.bitlength) == 0) this.bitlength++;
+        }
+         
+        long aikaLopussa = System.currentTimeMillis(); 
+        System.out.println("Purkuaika millisekunneissa "+(aikaLopussa-aikaAlussa));
+            
+        Node outputnode = output.getFirst();
+        
+        for (int i = 0; i < output.Size(); i++) {
+            Integer intByte = (int)outputnode.getValue();
+            outputnode = output.getNext(outputnode);
+            fw.write((byte)(int)intByte);
         }
 
         fw.write((byte)current);
         fw.close();
-
-        return output;
+        
     }
     
     /**
